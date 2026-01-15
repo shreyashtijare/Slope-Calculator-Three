@@ -1,0 +1,245 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f4f6fb;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -220px;
+  width: 220px;
+  height: 100%;
+  background: #111;
+  color: white;
+  z-index: 1000;
+  transition: left 0.25s ease;
+  padding-top: 20px;
+}
+.sidebar.open {
+  left: 0;
+}
+.sidebar h2 {
+  text-align: center;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.sidebar ul li a {
+  display: block;
+  padding: 12px 16px;
+  color: #ddd;
+  text-decoration: none;
+}
+.sidebar ul li a:hover {
+  background: #0b5ed7;
+  color: white;
+}
+
+/* Small toggle */
+.sidebar-toggle {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1100;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: #007bff;
+  color: white;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Panels */
+.panel {
+  position: absolute;
+  inset: 0;
+  display: none;
+  padding: 60px 20px 20px;
+  overflow-y: auto;
+}
+.panel.active {
+  display: block;
+}
+
+/* Grid layout */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Cards */
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+/* Inputs */
+label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
+}
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* Ratio */
+.ratio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Buttons */
+button {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  background: #007bff;
+  color: white;
+}
+button.secondary {
+  background: #6c757d;
+}
+
+.result {
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+/* FULLSCREEN MAP */
+#mapPanel {
+  padding: 0;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Map toolbar */
+.map-toolbar {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  z-index: 500;
+}
+.map-toolbar button {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Context menu */
+.context-menu {
+  position: absolute;
+  display: none;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 2000;
+  overflow: hidden;
+}
+.context-menu div {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.context-menu div:hover {
+  background: #f0f0f0;
+}
+
+/* Info panel */
+.info-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 12px 14px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 1500;
+  min-width: 240px;
+  display: none;
+  font-size: 14px;
+}
+
+.map-toolbar button {
+  margin-bottom: 10px;
+  width: auto;
+  min-width: 120px;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 360px;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.modal-actions button {
+  flex: 1;
+}
+
+/* Progress */
+.progress-container {
+  width: 100%;
+  height: 12px;
+  background: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: #007bff;
+  transition: width 0.3s ease;
+}
+#progressText {
+  margin-top: 6px;
+  font-size: 13px;
+}

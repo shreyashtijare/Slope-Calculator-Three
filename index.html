@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Engineering Tools</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
+  
+  <!-- Azure Maps CSS -->
+  <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" />
+  
+  <!-- Azure Maps Drawing Tools CSS -->
+  <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/drawing/0/atlas-drawing.min.css" />
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <h2>Tools</h2>
+  <ul>
+    <li><a href="#" data-panel="slopePanel">Slope Calculator</a></li>
+    <li><a href="#" data-panel="mapPanel">Maps Tool</a></li>
+  </ul>
+</div>
+
+<!-- Small toggle button -->
+<button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+<!-- ================= SLOPE PANEL ================= -->
+<div class="panel active" id="slopePanel">
+  <div class="grid">
+
+    <!-- Column 1 -->
+    <div class="card">
+      <h2>Slope Calculator</h2>
+
+      <label>Higher Elevation (HE)</label>
+      <input type="number" id="he">
+
+      <label>Lower Elevation (LE)</label>
+      <input type="number" id="le">
+
+      <label>Horizontal Distance</label>
+      <input type="number" id="distance">
+
+      <label>Slope (%)</label>
+      <input type="number" id="slope">
+
+      <button id="calculateBtn">Calculate</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+
+      <div id="result" class="result"></div>
+    </div>
+
+    <!-- Column 2 -->
+    <div class="card">
+      <h2>Slope Conversion</h2>
+
+      <label>Percent (%)</label>
+      <input type="number" id="convPercent">
+
+      <label>Ratio (rise : run)</label>
+      <div class="ratio">
+        <input type="number" id="ratioRise">
+        <span>:</span>
+        <input type="number" id="ratioRun">
+      </div>
+
+      <label>Angle (degrees)</label>
+      <input type="number" id="convAngle">
+
+      <button id="convertBtn">Convert</button>
+
+      <div id="convResult" class="result"></div>
+    </div>
+
+    <!-- Column 3 -->
+    <div class="card placeholder">
+      <h2>Future Tool</h2>
+      <p>Reserved for upcoming features.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= MAP PANEL ================= -->
+<div class="panel" id="mapPanel">
+  <div id="map"></div>
+
+<div class="map-toolbar">
+  <button id="toggleStyle">🛰️ Satellite</button>
+  <button id="clearShape">Clear Shape</button>
+</div>
+
+</div>
+
+<!-- Right-click context menu -->
+<div id="contextMenu" class="context-menu">
+  <div data-action="drawTools">📐 Drawing Tools</div>
+  <div data-action="coords">📍 Show Coordinates</div>
+  <div data-action="area">📏 Calculate Area</div>
+  <div data-action="startDistance">📐 Start Distance Measure</div>
+  <div data-action="finishDistance">✓ Finish Distance Measure</div>
+  <div data-action="clear">🗑️ Clear All</div>
+  <div data-action="export">💾 Export Map</div>
+</div>
+
+<!-- Info panel -->
+<div id="infoPanel" class="info-panel"></div>
+
+<!-- Temporary debugging tool -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
+<script src="script.js"></script>
+
+<!-- Export Modal -->
+<div id="exportModal" class="modal">
+  <div class="modal-content">
+    <h2>High-Resolution Export</h2>
+
+    <div id="exportEstimate"></div>
+
+    <div class="progress-container">
+      <div id="progressBar"></div>
+    </div>
+    <div id="progressText"></div>
+
+    <div class="modal-actions">
+      <button id="startExportBtn">Start Export</button>
+      <button id="cancelExportBtn" class="secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
