@@ -87,11 +87,27 @@
 <div class="panel" id="mapPanel">
   <div id="map"></div>
 
-<div class="map-toolbar">
-  <button id="toggleStyle">🛰️ Satellite</button>
-  <button id="clearShape">Clear Shape</button>
-</div>
+  <!-- Search bar -->
+  <div class="map-search">
+    <input type="text" id="mapSearchInput" placeholder="🔍 Search location..." />
+    <div id="searchResults" class="search-results"></div>
+  </div>
 
+  <!-- Map toolbar -->
+  <div class="map-toolbar">
+    <button id="toggleStyle">🛰️ Satellite</button>
+    <button id="toggleLabels">🏷️ Hide Labels</button>
+    <button id="clearShape">Clear Shape</button>
+  </div>
+
+  <!-- Navigation controls -->
+  <div class="nav-controls">
+    <button id="zoomIn" title="Zoom In">+</button>
+    <button id="zoomOut" title="Zoom Out">−</button>
+    <button id="rotateLeft" title="Rotate Left">↺</button>
+    <button id="rotateRight" title="Rotate Right">↻</button>
+    <button id="resetNorth" title="Reset to North">🧭</button>
+  </div>
 </div>
 
 <!-- Right-click context menu -->
