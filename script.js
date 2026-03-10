@@ -234,6 +234,195 @@ function initMap() {
       }
     });
 
+
+    // Feature: Search functionality
+let searchMarker = null;
+
+const searchInput = document.getElementById('mapSearchInput');
+const searchResults = document.getElementById('searchResults');
+
+if (searchInput) {
+  let searchTimeout;
+  
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    
+    if (query.length < 3) {
+      searchResults.style.display = 'none';
+      return;
+    }
+    
+    searchTimeout = setTimeout(() => searchLocation(query), 500);
+  });
+  
+  // Hide results when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+      searchResults.style.display = 'none';
+    }
+  });
+}
+
+async function searchLocation(query) {
+  try {
+    const url = `https://atlas.microsoft.com/search/fuzzy/json?` +
+      `api-version=1.0` +
+      `&query=${encodeURIComponent(query)}` +
+      `&subscription-key=${window.azureMapsSubscriptionKey}` +
+      `&limit=5`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      displaySearchResults(data.results);
+    } else {
+      searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
+      searchResults.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Search error:', error);
+    searchResults.innerHTML = '<div class="search-result-item">Search failed</div>';
+    searchResults.style.display = 'block';
+  }
+}
+
+function displaySearchResults(results) {
+  searchResults.innerHTML = '';
+  
+  results.forEach(result => {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.innerHTML = `
+      <div style="font-weight: 600;">${result.poi?.name || result.address.freeformAddress}</div>
+      <div style="font-size: 11px; color: #666; margin-top: 2px;">${result.address.countrySubdivision || ''} ${result.address.country || ''}</div>
+    `;
+    
+    item.onclick = () => {
+      goToLocation(result.position.lat, result.position.lon, result.poi?.name || result.address.freeformAddress);
+      searchResults.style.display = 'none';
+      searchInput.value = result.address.freeformAddress;
+    };
+    
+    searchResults.appendChild(item);
+  });
+  
+  searchResults.style.display = 'block';
+}
+
+function goToLocation(lat, lng, name) {
+  // Remove old search marker
+  if (searchMarker) {
+    map.markers.remove(searchMarker);
+  }
+  
+  // Add new marker
+  searchMarker = new atlas.HtmlMarker({
+    position: [lng, lat],
+    htmlContent: `
+      <div style="
+        background: #d32f2f;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        white-space: nowrap;
+      ">
+        📍 ${name}
+      </div>
+    `,
+    pixelOffset: [0, -10]
+  });
+  
+  map.markers.add(searchMarker);
+  
+  // Fly to location
+  map.setCamera({
+    center: [lng, lat],
+    zoom: 15,
+    type: 'fly',
+    duration: 1000
+  });
+}
+
+// Feature: Navigation Controls
+const zoomInBtn = document.getElementById('zoomIn');
+const zoomOutBtn = document.getElementById('zoomOut');
+const rotateLeftBtn = document.getElementById('rotateLeft');
+const rotateRightBtn = document.getElementById('rotateRight');
+const resetNorthBtn = document.getElementById('resetNorth');
+
+if (zoomInBtn) {
+  zoomInBtn.onclick = () => {
+    const currentZoom = map.getCamera().zoom;
+    map.setCamera({ zoom: currentZoom + 1, type: 'ease', duration: 300 });
+  };
+}
+
+if (zoomOutBtn) {
+  zoomOutBtn.onclick = () => {
+    const currentZoom = map.getCamera().zoom;
+    map.setCamera({ zoom: currentZoom - 1, type: 'ease', duration: 300 });
+  };
+}
+
+if (rotateLeftBtn) {
+  rotateLeftBtn.onclick = () => {
+    const currentBearing = map.getCamera().bearing || 0;
+    map.setCamera({ bearing: currentBearing - 15, type: 'ease', duration: 300 });
+  };
+}
+
+if (rotateRightBtn) {
+  rotateRightBtn.onclick = () => {
+    const currentBearing = map.getCamera().bearing || 0;
+    map.setCamera({ bearing: currentBearing + 15, type: 'ease', duration: 300 });
+  };
+}
+
+if (resetNorthBtn) {
+  resetNorthBtn.onclick = () => {
+    map.setCamera({ 
+      bearing: 0, 
+      pitch: 0,
+      type: 'ease', 
+      duration: 500 
+    });
+  };
+}
+
+// Feature: Toggle Labels
+const toggleLabelsBtn = document.getElementById('toggleLabels');
+let labelsVisible = true;
+
+if (toggleLabelsBtn) {
+  toggleLabelsBtn.onclick = () => {
+    labelsVisible = !labelsVisible;
+    
+    if (labelsVisible) {
+      toggleLabelsBtn.textContent = '🏷️ Hide Labels';
+      // Show labels based on current style
+      if (currentStyle === 'satellite') {
+        map.setStyle({ style: 'satellite_road_labels' });
+      } else {
+        map.setStyle({ style: 'road' });
+      }
+    } else {
+      toggleLabelsBtn.textContent = '🏷️ Show Labels';
+      // Hide labels
+      if (currentStyle === 'satellite') {
+        map.setStyle({ style: 'satellite' });
+      } else {
+        map.setStyle({ style: 'road_shaded_relief' });
+      }
+    }
+  };
+}
+
+
     // Handle shape completion
     map.events.add('drawingcomplete', drawingManager, function(shape) {
       if (activeShape) {
@@ -713,8 +902,9 @@ const toggleStyleBtn = document.getElementById("toggleStyle");
 let currentStyle = 'road';
 let isChangingStyle = false;
 
+
+// Update the toggleStyleBtn.onclick function
 if (toggleStyleBtn) {
-  // Apply compact styling
   toggleStyleBtn.style.minWidth = '100px';
   toggleStyleBtn.style.fontSize = '11px';
   toggleStyleBtn.style.padding = '6px 10px';
@@ -726,12 +916,16 @@ if (toggleStyleBtn) {
     toggleStyleBtn.disabled = true;
     
     if (currentStyle === 'road') {
-      map.setStyle({ style: 'satellite_road_labels' });
+      // Switch to satellite
+      const satStyle = labelsVisible ? 'satellite_road_labels' : 'satellite';
+      map.setStyle({ style: satStyle });
       currentStyle = 'satellite';
       toggleStyleBtn.textContent = '🗺️ Road';
       toggleStyleBtn.style.background = '#2e7d32';
     } else {
-      map.setStyle({ style: 'road' });
+      // Switch to road
+      const roadStyle = labelsVisible ? 'road' : 'road_shaded_relief';
+      map.setStyle({ style: roadStyle });
       currentStyle = 'road';
       toggleStyleBtn.textContent = '🛰️ Satellite';
       toggleStyleBtn.style.background = '#007bff';
