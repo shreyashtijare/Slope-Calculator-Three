@@ -64,6 +64,7 @@ let drawingManager;
 let activeShape = null;
 let areaLabel = null;
 let distanceMarkers = [];
+let searchMarker = null;
 let contextLatLng = null;
 let distancePath = [];
 let distanceDataSource = null;
@@ -210,7 +211,7 @@ function initMap() {
   map.events.add('ready', function() {
     console.log('Map is ready!');
     
-    // Add scale bar control (Feature 4)
+    // Add scale bar control
     map.controls.add(new atlas.control.ScaleControl({
       maxBarLength: 100,
       units: 'metric'
@@ -221,207 +222,17 @@ function initMap() {
     // Initialize drawing manager WITHOUT toolbar
     drawingManager = new atlas.drawing.DrawingManager(map, {
       toolbar: new atlas.control.DrawingToolbar({
-        buttons: [],  // No buttons - we'll use custom menu
+        buttons: [],
         position: 'top-right',
         style: 'light',
         visible: false
       }),
       freehandInterval: 3,
       snapDistance: 15,
-      // Fix for editing - ensure polygon stays visible
       shapeDraggingOptions: {
         visible: true
       }
     });
-
-
-    // Feature: Search functionality
-let searchMarker = null;
-
-const searchInput = document.getElementById('mapSearchInput');
-const searchResults = document.getElementById('searchResults');
-
-if (searchInput) {
-  let searchTimeout;
-  
-  searchInput.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    const query = e.target.value.trim();
-    
-    if (query.length < 3) {
-      searchResults.style.display = 'none';
-      return;
-    }
-    
-    searchTimeout = setTimeout(() => searchLocation(query), 500);
-  });
-  
-  // Hide results when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-      searchResults.style.display = 'none';
-    }
-  });
-}
-
-async function searchLocation(query) {
-  try {
-    const url = `https://atlas.microsoft.com/search/fuzzy/json?` +
-      `api-version=1.0` +
-      `&query=${encodeURIComponent(query)}` +
-      `&subscription-key=${window.azureMapsSubscriptionKey}` +
-      `&limit=5`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data.results && data.results.length > 0) {
-      displaySearchResults(data.results);
-    } else {
-      searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
-      searchResults.style.display = 'block';
-    }
-  } catch (error) {
-    console.error('Search error:', error);
-    searchResults.innerHTML = '<div class="search-result-item">Search failed</div>';
-    searchResults.style.display = 'block';
-  }
-}
-
-function displaySearchResults(results) {
-  searchResults.innerHTML = '';
-  
-  results.forEach(result => {
-    const item = document.createElement('div');
-    item.className = 'search-result-item';
-    item.innerHTML = `
-      <div style="font-weight: 600;">${result.poi?.name || result.address.freeformAddress}</div>
-      <div style="font-size: 11px; color: #666; margin-top: 2px;">${result.address.countrySubdivision || ''} ${result.address.country || ''}</div>
-    `;
-    
-    item.onclick = () => {
-      goToLocation(result.position.lat, result.position.lon, result.poi?.name || result.address.freeformAddress);
-      searchResults.style.display = 'none';
-      searchInput.value = result.address.freeformAddress;
-    };
-    
-    searchResults.appendChild(item);
-  });
-  
-  searchResults.style.display = 'block';
-}
-
-function goToLocation(lat, lng, name) {
-  // Remove old search marker
-  if (searchMarker) {
-    map.markers.remove(searchMarker);
-  }
-  
-  // Add new marker
-  searchMarker = new atlas.HtmlMarker({
-    position: [lng, lat],
-    htmlContent: `
-      <div style="
-        background: #d32f2f;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 12px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-        white-space: nowrap;
-      ">
-        📍 ${name}
-      </div>
-    `,
-    pixelOffset: [0, -10]
-  });
-  
-  map.markers.add(searchMarker);
-  
-  // Fly to location
-  map.setCamera({
-    center: [lng, lat],
-    zoom: 15,
-    type: 'fly',
-    duration: 1000
-  });
-}
-
-// Feature: Navigation Controls
-const zoomInBtn = document.getElementById('zoomIn');
-const zoomOutBtn = document.getElementById('zoomOut');
-const rotateLeftBtn = document.getElementById('rotateLeft');
-const rotateRightBtn = document.getElementById('rotateRight');
-const resetNorthBtn = document.getElementById('resetNorth');
-
-if (zoomInBtn) {
-  zoomInBtn.onclick = () => {
-    const currentZoom = map.getCamera().zoom;
-    map.setCamera({ zoom: currentZoom + 1, type: 'ease', duration: 300 });
-  };
-}
-
-if (zoomOutBtn) {
-  zoomOutBtn.onclick = () => {
-    const currentZoom = map.getCamera().zoom;
-    map.setCamera({ zoom: currentZoom - 1, type: 'ease', duration: 300 });
-  };
-}
-
-if (rotateLeftBtn) {
-  rotateLeftBtn.onclick = () => {
-    const currentBearing = map.getCamera().bearing || 0;
-    map.setCamera({ bearing: currentBearing - 15, type: 'ease', duration: 300 });
-  };
-}
-
-if (rotateRightBtn) {
-  rotateRightBtn.onclick = () => {
-    const currentBearing = map.getCamera().bearing || 0;
-    map.setCamera({ bearing: currentBearing + 15, type: 'ease', duration: 300 });
-  };
-}
-
-if (resetNorthBtn) {
-  resetNorthBtn.onclick = () => {
-    map.setCamera({ 
-      bearing: 0, 
-      pitch: 0,
-      type: 'ease', 
-      duration: 500 
-    });
-  };
-}
-
-// Feature: Toggle Labels
-const toggleLabelsBtn = document.getElementById('toggleLabels');
-let labelsVisible = true;
-
-if (toggleLabelsBtn) {
-  toggleLabelsBtn.onclick = () => {
-    labelsVisible = !labelsVisible;
-    
-    if (labelsVisible) {
-      toggleLabelsBtn.textContent = '🏷️ Hide Labels';
-      // Show labels based on current style
-      if (currentStyle === 'satellite') {
-        map.setStyle({ style: 'satellite_road_labels' });
-      } else {
-        map.setStyle({ style: 'road' });
-      }
-    } else {
-      toggleLabelsBtn.textContent = '🏷️ Show Labels';
-      // Hide labels
-      if (currentStyle === 'satellite') {
-        map.setStyle({ style: 'satellite' });
-      } else {
-        map.setStyle({ style: 'road_shaded_relief' });
-      }
-    }
-  };
-}
-
 
     // Handle shape completion
     map.events.add('drawingcomplete', drawingManager, function(shape) {
@@ -435,7 +246,6 @@ if (toggleLabelsBtn) {
       activeShape = shape;
       displayAreaOnShape(shape);
       
-      // Stop drawing mode after completion
       drawingManager.setOptions({ mode: 'idle' });
     });
 
@@ -475,11 +285,271 @@ if (toggleLabelsBtn) {
         }
       });
     }
+    
+    // Initialize all controls after map is ready
+    initializeMapControls();
   });
   
   map.events.add('error', function(e) {
     console.error('Map error:', e);
   });
+}
+
+// Initialize all map controls
+function initializeMapControls() {
+  initSearchBar();
+  initNavigationControls();
+  initStyleToggle();
+  initLabelToggle();
+}
+
+// Search functionality
+function initSearchBar() {
+  const searchInput = document.getElementById('mapSearchInput');
+  const searchResults = document.getElementById('searchResults');
+  
+  if (!searchInput || !searchResults) return;
+  
+  let searchTimeout;
+  
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    
+    if (query.length < 3) {
+      searchResults.style.display = 'none';
+      return;
+    }
+    
+    searchTimeout = setTimeout(() => searchLocation(query), 500);
+  });
+  
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+      searchResults.style.display = 'none';
+    }
+  });
+}
+
+async function searchLocation(query) {
+  const searchResults = document.getElementById('searchResults');
+  
+  try {
+    const url = `https://atlas.microsoft.com/search/fuzzy/json?` +
+      `api-version=1.0` +
+      `&query=${encodeURIComponent(query)}` +
+      `&subscription-key=${window.azureMapsSubscriptionKey}` +
+      `&limit=5`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      displaySearchResults(data.results);
+    } else {
+      searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
+      searchResults.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Search error:', error);
+    searchResults.innerHTML = '<div class="search-result-item">Search failed</div>';
+    searchResults.style.display = 'block';
+  }
+}
+
+function displaySearchResults(results) {
+  const searchResults = document.getElementById('searchResults');
+  searchResults.innerHTML = '';
+  
+  results.forEach(result => {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.innerHTML = `
+      <div style="font-weight: 600;">${result.poi?.name || result.address.freeformAddress}</div>
+      <div style="font-size: 11px; color: #666; margin-top: 2px;">${result.address.countrySubdivision || ''} ${result.address.country || ''}</div>
+    `;
+    
+    item.onclick = () => {
+      goToLocation(result.position.lat, result.position.lon, result.poi?.name || result.address.freeformAddress);
+      searchResults.style.display = 'none';
+      document.getElementById('mapSearchInput').value = result.address.freeformAddress;
+    };
+    
+    searchResults.appendChild(item);
+  });
+  
+  searchResults.style.display = 'block';
+}
+
+function goToLocation(lat, lng, name) {
+  if (searchMarker) {
+    map.markers.remove(searchMarker);
+  }
+  
+  searchMarker = new atlas.HtmlMarker({
+    position: [lng, lat],
+    htmlContent: `
+      <div style="
+        background: #d32f2f;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        white-space: nowrap;
+      ">
+        📍 ${name}
+      </div>
+    `,
+    pixelOffset: [0, -10]
+  });
+  
+  map.markers.add(searchMarker);
+  
+  map.setCamera({
+    center: [lng, lat],
+    zoom: 15,
+    type: 'fly',
+    duration: 1000
+  });
+}
+
+// Navigation Controls
+function initNavigationControls() {
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const rotateLeftBtn = document.getElementById('rotateLeft');
+  const rotateRightBtn = document.getElementById('rotateRight');
+  const resetNorthBtn = document.getElementById('resetNorth');
+
+  if (zoomInBtn) {
+    zoomInBtn.onclick = () => {
+      const currentZoom = map.getCamera().zoom;
+      map.setCamera({ zoom: currentZoom + 1, type: 'ease', duration: 300 });
+    };
+  }
+
+  if (zoomOutBtn) {
+    zoomOutBtn.onclick = () => {
+      const currentZoom = map.getCamera().zoom;
+      map.setCamera({ zoom: currentZoom - 1, type: 'ease', duration: 300 });
+    };
+  }
+
+  if (rotateLeftBtn) {
+    rotateLeftBtn.onclick = () => {
+      const currentBearing = map.getCamera().bearing || 0;
+      map.setCamera({ bearing: currentBearing - 15, type: 'ease', duration: 300 });
+    };
+  }
+
+  if (rotateRightBtn) {
+    rotateRightBtn.onclick = () => {
+      const currentBearing = map.getCamera().bearing || 0;
+      map.setCamera({ bearing: currentBearing + 15, type: 'ease', duration: 300 });
+    };
+  }
+
+  if (resetNorthBtn) {
+    resetNorthBtn.onclick = () => {
+      map.setCamera({ 
+        bearing: 0, 
+        pitch: 0,
+        type: 'ease', 
+        duration: 500 
+      });
+    };
+  }
+}
+
+// Style Toggle - FIXED VERSION
+let currentStyle = 'road';
+let labelsVisible = true;
+let isChangingStyle = false;
+
+function initStyleToggle() {
+  const toggleStyleBtn = document.getElementById('toggleStyle');
+  
+  if (!toggleStyleBtn) return;
+  
+  toggleStyleBtn.style.minWidth = '100px';
+  toggleStyleBtn.style.fontSize = '11px';
+  toggleStyleBtn.style.padding = '6px 10px';
+  
+  toggleStyleBtn.onclick = () => {
+    if (!map || isChangingStyle) return;
+    
+    isChangingStyle = true;
+    toggleStyleBtn.disabled = true;
+    
+    // Determine new style
+    let newStyleName;
+    
+    if (currentStyle === 'road') {
+      // Switching TO satellite
+      newStyleName = labelsVisible ? 'satellite_road_labels' : 'satellite';
+      currentStyle = 'satellite';
+      toggleStyleBtn.textContent = '🗺️ Road';
+      toggleStyleBtn.style.background = '#2e7d32';
+    } else {
+      // Switching TO road
+      newStyleName = labelsVisible ? 'road' : 'road_shaded_relief';
+      currentStyle = 'road';
+      toggleStyleBtn.textContent = '🛰️ Satellite';
+      toggleStyleBtn.style.background = '#007bff';
+    }
+    
+    console.log('Switching to style:', newStyleName);
+    
+    // Apply the style change
+    map.setStyle({
+      style: newStyleName
+    });
+    
+    // Re-enable button after transition
+    setTimeout(() => {
+      isChangingStyle = false;
+      toggleStyleBtn.disabled = false;
+    }, 1500);
+  };
+}
+
+// Label Toggle
+function initLabelToggle() {
+  const toggleLabelsBtn = document.getElementById('toggleLabels');
+  
+  if (!toggleLabelsBtn) return;
+  
+  toggleLabelsBtn.onclick = () => {
+    if (isChangingStyle) return;
+    
+    isChangingStyle = true;
+    toggleLabelsBtn.disabled = true;
+    
+    labelsVisible = !labelsVisible;
+    
+    let newStyleName;
+    
+    if (labelsVisible) {
+      toggleLabelsBtn.textContent = '🏷️ Hide Labels';
+      newStyleName = currentStyle === 'satellite' ? 'satellite_road_labels' : 'road';
+    } else {
+      toggleLabelsBtn.textContent = '🏷️ Show Labels';
+      newStyleName = currentStyle === 'satellite' ? 'satellite' : 'road_shaded_relief';
+    }
+    
+    console.log('Switching labels to style:', newStyleName);
+    
+    map.setStyle({
+      style: newStyleName
+    });
+    
+    setTimeout(() => {
+      isChangingStyle = false;
+      toggleLabelsBtn.disabled = false;
+    }, 1500);
+  };
 }
 
 // Calculate polygon area using Shoelace formula
@@ -510,7 +580,7 @@ function calculatePolygonArea(coordinates) {
   return area;
 }
 
-// Display area label inside the shape (Feature 2 - added sq ft)
+// Display area label inside the shape
 function displayAreaOnShape(shape) {
   if (!shape) return;
   
@@ -536,7 +606,7 @@ function displayAreaOnShape(shape) {
   
   if (center && area > 0) {
     const areaM2 = area.toFixed(2);
-    const areaSqFt = (area * 10.7639).toFixed(2);  // Convert m² to sq ft
+    const areaSqFt = (area * 10.7639).toFixed(2);
     const areaHa = (area / 10000).toFixed(4);
     const areaAcres = (area * 0.000247105).toFixed(4);
     
@@ -571,25 +641,21 @@ function displayAreaOnShape(shape) {
   }
 }
 
-// Feature 3: Update distance line with markers and labels
+// Update distance line with markers and labels
 function updateDistanceLine() {
   if (!distanceDataSource || distancePath.length === 0) return;
   
-  // Clear old markers
   distanceMarkers.forEach(marker => map.markers.remove(marker));
   distanceMarkers = [];
   
   distanceDataSource.clear();
   
-  // Draw line
   const line = new atlas.data.LineString(distancePath);
   distanceDataSource.add(new atlas.data.Feature(line));
   
-  // Add markers and labels for each segment
   let totalDistance = 0;
   
   for (let i = 0; i < distancePath.length; i++) {
-    // Add vertex marker
     const vertexMarker = new atlas.HtmlMarker({
       position: distancePath[i],
       htmlContent: `
@@ -607,14 +673,12 @@ function updateDistanceLine() {
     map.markers.add(vertexMarker);
     distanceMarkers.push(vertexMarker);
     
-    // Add distance label for each segment
     if (i > 0) {
       const pos1 = new atlas.data.Position(distancePath[i-1][0], distancePath[i-1][1]);
       const pos2 = new atlas.data.Position(distancePath[i][0], distancePath[i][1]);
       const segmentDistance = atlas.math.getDistanceTo(pos1, pos2);
       totalDistance += segmentDistance;
       
-      // Midpoint of segment
       const midLng = (distancePath[i-1][0] + distancePath[i][0]) / 2;
       const midLat = (distancePath[i-1][1] + distancePath[i][1]) / 2;
       
@@ -642,7 +706,6 @@ function updateDistanceLine() {
     }
   }
   
-  // Total distance marker at end
   if (distancePath.length > 1) {
     const totalLabel = new atlas.HtmlMarker({
       position: distancePath[distancePath.length - 1],
@@ -691,189 +754,7 @@ function getShapeArea(shape) {
   return 0;
 }
 
-// Add this after the updateDistanceLine function
-
-// HIGH-RESOLUTION EXPORT - Feature Request
-async function exportHighResolution() {
-  if (!activeShape) {
-    showInfo("⚠️ Draw a polygon or rectangle first.");
-    return;
-  }
-
-  showInfo("🔄 Generating high-resolution export...<br>This may take a moment.");
-
-  try {
-    // Get bounds of the shape
-    const geometry = activeShape.toJson().geometry;
-    const coords = geometry.coordinates[0];
-    
-    let minLng = Infinity, maxLng = -Infinity;
-    let minLat = Infinity, maxLat = -Infinity;
-    
-    coords.forEach(coord => {
-      minLng = Math.min(minLng, coord[0]);
-      maxLng = Math.max(maxLng, coord[0]);
-      minLat = Math.min(minLat, coord[1]);
-      maxLat = Math.max(maxLat, coord[1]);
-    });
-    
-    const bounds = {
-      north: maxLat,
-      south: minLat,
-      east: maxLng,
-      west: minLng
-    };
-    
-    // Calculate zoom level based on area size
-    const lngDiff = maxLng - minLng;
-    const latDiff = maxLat - minLat;
-    const maxDiff = Math.max(lngDiff, latDiff);
-    
-    // Determine optimal zoom (higher for smaller areas)
-    let targetZoom;
-    if (maxDiff < 0.001) targetZoom = 20;        // Very small area
-    else if (maxDiff < 0.01) targetZoom = 18;    // Small area
-    else if (maxDiff < 0.1) targetZoom = 16;     // Medium area
-    else if (maxDiff < 1) targetZoom = 14;       // Large area
-    else targetZoom = 12;                         // Very large area
-    
-    // Calculate tiles needed
-    const tiles = calculateTilesForBounds(bounds, targetZoom);
-    
-    if (tiles.length > 50) {
-      showInfo(`⚠️ Area too large! Would require ${tiles.length} tiles.<br>Try a smaller area.`);
-      return;
-    }
-    
-    showInfo(`📦 Fetching ${tiles.length} tiles at zoom level ${targetZoom}...`);
-    
-    // Fetch all tiles
-    const tileSize = 512;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Calculate canvas size
-    const xTiles = new Set(tiles.map(t => t.x)).size;
-    const yTiles = new Set(tiles.map(t => t.y)).size;
-    canvas.width = xTiles * tileSize;
-    canvas.height = yTiles * tileSize;
-    
-    const minX = Math.min(...tiles.map(t => t.x));
-    const minY = Math.min(...tiles.map(t => t.y));
-    
-    // Fetch and draw tiles
-    let completed = 0;
-    for (const tile of tiles) {
-      try {
-        const img = await fetchMapTile(tile.x, tile.y, targetZoom);
-        const offsetX = (tile.x - minX) * tileSize;
-        const offsetY = (tile.y - minY) * tileSize;
-        ctx.drawImage(img, offsetX, offsetY, tileSize, tileSize);
-        
-        completed++;
-        showInfo(`📦 Progress: ${completed}/${tiles.length} tiles loaded...`);
-      } catch (err) {
-        console.error('Tile fetch error:', err);
-      }
-    }
-    
-    // Crop to actual bounds
-    const croppedCanvas = cropCanvasToBounds(canvas, bounds, targetZoom, minX, minY, tileSize);
-    
-    // Download
-    croppedCanvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `map_highres_${Date.now()}.png`;
-      a.click();
-      showInfo(`✅ High-resolution export complete!<br>Size: ${croppedCanvas.width}x${croppedCanvas.height}px`);
-    });
-    
-  } catch (err) {
-    console.error('Export error:', err);
-    showInfo("❌ High-res export failed: " + err.message);
-  }
-}
-
-// Calculate tile coordinates for bounds
-function calculateTilesForBounds(bounds, zoom) {
-  const tiles = [];
-  const topLeft = latLngToTileCoords(bounds.north, bounds.west, zoom);
-  const bottomRight = latLngToTileCoords(bounds.south, bounds.east, zoom);
-  
-  for (let x = topLeft.x; x <= bottomRight.x; x++) {
-    for (let y = topLeft.y; y <= bottomRight.y; y++) {
-      tiles.push({ x, y, zoom });
-    }
-  }
-  
-  return tiles;
-}
-
-// Convert lat/lng to tile coordinates
-function latLngToTileCoords(lat, lng, zoom) {
-  const n = Math.pow(2, zoom);
-  const xTile = Math.floor((lng + 180) / 360 * n);
-  const yTile = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n);
-  return { x: xTile, y: yTile };
-}
-
-// Fetch a single map tile
-function fetchMapTile(x, y, zoom) {
-  return new Promise((resolve, reject) => {
-    const style = currentStyle === 'satellite' ? 'satellite_road_labels' : 'road';
-    
-    // Use Azure Maps tile API
-    const url = `https://atlas.microsoft.com/map/tile?` +
-      `api-version=2.2` +
-      `&tilesetId=microsoft.base.${style}` +
-      `&zoom=${zoom}` +
-      `&x=${x}` +
-      `&y=${y}` +
-      `&tileSize=512` +
-      `&subscription-key=${window.azureMapsSubscriptionKey}`;
-    
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load tile ${x},${y}`));
-    
-    img.src = url;
-  });
-}
-
-// Crop canvas to exact bounds
-function cropCanvasToBounds(canvas, bounds, zoom, minX, minY, tileSize) {
-  // Calculate pixel coordinates within the tile grid
-  const topLeft = latLngToPixelCoords(bounds.north, bounds.west, zoom, tileSize);
-  const bottomRight = latLngToPixelCoords(bounds.south, bounds.east, zoom, tileSize);
-  
-  const offsetX = topLeft.x - (minX * tileSize);
-  const offsetY = topLeft.y - (minY * tileSize);
-  const width = bottomRight.x - topLeft.x;
-  const height = bottomRight.y - topLeft.y;
-  
-  const croppedCanvas = document.createElement('canvas');
-  croppedCanvas.width = width;
-  croppedCanvas.height = height;
-  const ctx = croppedCanvas.getContext('2d');
-  
-  ctx.drawImage(canvas, offsetX, offsetY, width, height, 0, 0, width, height);
-  
-  return croppedCanvas;
-}
-
-// Convert lat/lng to pixel coordinates
-function latLngToPixelCoords(lat, lng, zoom, tileSize) {
-  const n = Math.pow(2, zoom);
-  const x = (lng + 180) / 360 * n * tileSize;
-  const y = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n * tileSize;
-  return { x: Math.floor(x), y: Math.floor(y) };
-}
-
-// Feature 5 & 7: Clear function
+// Clear all shapes function
 function clearAllShapes() {
   if (activeShape && drawingManager) {
     drawingManager.getSource().remove(activeShape);
@@ -890,6 +771,11 @@ function clearAllShapes() {
   distanceMarkers = [];
   distancePath = [];
   measuringDistance = false;
+  
+  if (searchMarker) {
+    map.markers.remove(searchMarker);
+    searchMarker = null;
+  }
 }
 
 const clearShapeBtn = document.getElementById("clearShape");
@@ -897,47 +783,7 @@ if (clearShapeBtn) {
   clearShapeBtn.onclick = clearAllShapes;
 }
 
-// Feature 6: Smaller, different style toggle button
-const toggleStyleBtn = document.getElementById("toggleStyle");
-let currentStyle = 'road';
-let isChangingStyle = false;
-
-
-// Update the toggleStyleBtn.onclick function
-if (toggleStyleBtn) {
-  toggleStyleBtn.style.minWidth = '100px';
-  toggleStyleBtn.style.fontSize = '11px';
-  toggleStyleBtn.style.padding = '6px 10px';
-  
-  toggleStyleBtn.onclick = () => {
-    if (!map || isChangingStyle) return;
-    
-    isChangingStyle = true;
-    toggleStyleBtn.disabled = true;
-    
-    if (currentStyle === 'road') {
-      // Switch to satellite
-      const satStyle = labelsVisible ? 'satellite_road_labels' : 'satellite';
-      map.setStyle({ style: satStyle });
-      currentStyle = 'satellite';
-      toggleStyleBtn.textContent = '🗺️ Road';
-      toggleStyleBtn.style.background = '#2e7d32';
-    } else {
-      // Switch to road
-      const roadStyle = labelsVisible ? 'road' : 'road_shaded_relief';
-      map.setStyle({ style: roadStyle });
-      currentStyle = 'road';
-      toggleStyleBtn.textContent = '🛰️ Satellite';
-      toggleStyleBtn.style.background = '#007bff';
-    }
-    
-    setTimeout(() => {
-      isChangingStyle = false;
-      toggleStyleBtn.disabled = false;
-    }, 1000);
-  };
-}
-
+// Context menu handlers
 if (contextMenu) {
   contextMenu.addEventListener("click", e => {
     const action = e.target.dataset.action;
@@ -948,7 +794,6 @@ if (contextMenu) {
     const lng = contextLatLng[0];
     const lat = contextLatLng[1];
 
-    // Feature 7: Drawing tools submenu
     if (action === "drawTools") {
       showInfo(`
         <div style="font-weight: 600; margin-bottom: 8px;">📐 Drawing Tools</div>
@@ -968,7 +813,6 @@ if (contextMenu) {
       return;
     }
 
-    // Feature 5: Clear in context menu
     if (action === "clear") {
       clearAllShapes();
       showInfo("✅ All shapes cleared!");
@@ -1051,52 +895,35 @@ if (contextMenu) {
         return;
       }
 
-      // Show export options
-      showInfo(`
-        <div style="font-weight: 600; margin-bottom: 8px;">💾 Export Options</div>
-        <button onclick="exportStandardResolution(); hideInfo();" 
-          style="width: 100%; margin: 4px 0; padding: 8px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">
-          📷 Standard Export (Fast)
-        </button>
-        <button onclick="exportHighResolution(); hideInfo();" 
-          style="width: 100%; margin: 4px 0; padding: 8px; border: none; background: #2e7d32; color: white; border-radius: 4px; cursor: pointer;">
-          🎯 High-Res Export (Slow, Better Quality)
-      </button>
-    `);
-     return;
-  }
+      const center = map.getCamera().center;
+      const zoom = map.getCamera().zoom;
+      const mapType = map.getStyle().style;
 
-  // Add this function for standard export
-  function exportStandardResolution() {
-   const center = map.getCamera().center;
-   const zoom = map.getCamera().zoom;
-   const mapType = map.getStyle().style;
-
-   fetch("/api/export", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      center: center,
-      zoom: Math.round(zoom),
-      mapType: mapType.includes('satellite') ? 'satellite' : 'road'
-    })
-  })
-    .then(res => {
-      if (!res.ok) throw new Error('Export failed');
-      return res.blob();
-    })
-    .then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "map_export.png";
-      a.click();
-      showInfo("✅ Map exported successfully!");
-    })
-    .catch((err) => {
-      console.error(err);
-      showInfo("❌ Export failed.");
-    });
-}
+      fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          center: center,
+          zoom: Math.round(zoom),
+          mapType: mapType.includes('satellite') ? 'satellite' : 'road'
+        })
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Export failed');
+          return res.blob();
+        })
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "map_export.png";
+          a.click();
+          showInfo("✅ Map exported successfully!");
+        })
+        .catch((err) => {
+          console.error(err);
+          showInfo("❌ Export failed.");
+        });
+    }
   });
 }
